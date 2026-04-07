@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'RiverTech CRM',
+  title: 'Reveretech CRM',
   description: 'Mobile-first real estate sales platform — manage leads, track follow-ups, improve conversions.',
 }
 

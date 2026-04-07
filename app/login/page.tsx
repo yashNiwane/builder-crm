@@ -57,7 +57,7 @@ export default function LoginPage() {
 
       <div className="login-card animate-in relative z-10 backdrop-blur-md bg-white/80 dark:bg-slate-900/80 mt-12 w-full max-w-sm">
         <div className="login-logo text-center">
-          <h1 className="text-2xl font-bold mb-2">RiverTech CRM</h1>
+          <h1 className="text-2xl font-bold mb-2">Reveretech CRM</h1>
           <p className="text-[var(--text-muted)]">Real estate sales, simplified</p>
         </div>
 
