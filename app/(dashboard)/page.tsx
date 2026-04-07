@@ -3,7 +3,6 @@ import Link from 'next/link'
 import TaskList from '@/components/dashboard/TaskList'
 import RecentLeads from '@/components/dashboard/RecentLeads'
 import QuickStats from '@/components/dashboard/QuickStats'
-import { SparklesText } from '@/components/magicui/sparkles-text'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -69,7 +68,7 @@ export default async function DashboardPage() {
     <div className="animate-in">
       <div className="page-header">
         <div>
-          <SparklesText text={`Hey, ${firstName} 👋`} as="h1" className="page-title !tracking-tight pr-4" />
+          <h1 className="page-title !tracking-tight pr-4">Hey, {firstName} 👋</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: 4 }}>
             {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
