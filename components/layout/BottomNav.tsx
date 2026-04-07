@@ -21,7 +21,7 @@ export default function BottomNav({ role }: { role: string }) {
       {/* Desktop sidebar */}
       <aside className="sidebar">
         <div className="sidebar-logo">
-          <h2>RiverTech CRM</h2>
+          <h2>Reveretech CRM</h2>
         </div>
         <nav className="sidebar-nav">
           {navItems.map((item) => {
