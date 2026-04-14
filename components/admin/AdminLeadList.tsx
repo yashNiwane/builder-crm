@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
@@ -28,7 +28,12 @@ export default function AdminLeadList({ leads, agents }: { leads: Lead[]; agents
   const [bulkAgent, setBulkAgent] = useState('')
   const [isBulkAssigning, setIsBulkAssigning] = useState(false)
 
-  const filtered = leads.filter(l => {
+  const [optimisticLeads, setOptimisticLeads] = useState<Lead[]>(leads)
+  useEffect(() => {
+    setOptimisticLeads(leads)
+  }, [leads])
+
+  const filtered = optimisticLeads.filter(l => {
     const matchSearch = !search || l.name.toLowerCase().includes(search.toLowerCase()) || l.phone.includes(search)
     const matchAgent = !agentFilter || l.assigned_agent === agentFilter
     return matchSearch && matchAgent
@@ -50,6 +55,7 @@ export default function AdminLeadList({ leads, agents }: { leads: Lead[]; agents
   }
 
   async function reassign(leadId: string, agentId: string) {
+    setOptimisticLeads(prev => prev.map(l => l.id === leadId ? { ...l, assigned_agent: agentId || null } : l))
     await supabase.from('leads').update({ assigned_agent: agentId || null }).eq('id', leadId)
     router.refresh()
   }
@@ -57,6 +63,9 @@ export default function AdminLeadList({ leads, agents }: { leads: Lead[]; agents
   async function bulkAssign() {
     if (selectedIds.size === 0) return
     setIsBulkAssigning(true)
+    const agentLabel = bulkAgent || null
+    setOptimisticLeads(prev => prev.map(l => selectedIds.has(l.id) ? { ...l, assigned_agent: agentLabel } : l))
+
     
     // Batch update using supabase `in` filter
     await supabase

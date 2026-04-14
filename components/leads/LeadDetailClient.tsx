@@ -39,61 +39,96 @@ export default function LeadDetailClient({ lead, activities, reminders, agents, 
   const [showReminderForm, setShowReminderForm] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  // Optimistic State mapped from props
+  const [optLead, setOptLead] = useState(lead)
+  const [optActivities, setOptActivities] = useState(activities)
+  const [optReminders, setOptReminders] = useState(reminders)
+  
+  // Sync when props change (after router.refresh finishes)
+  import { useEffect } from 'react'
+  useEffect(() => {
+    setOptLead(lead)
+    setOptActivities(activities)
+    setOptReminders(reminders)
+  }, [lead, activities, reminders])
+
+
   async function updateStatus(newStatus: string) {
-    if (newStatus === lead.status) return
-    setLoading(true)
+    if (newStatus === optLead.status) return
+    const prev = optLead.status
+    setOptLead({ ...optLead, status: newStatus }) // Optimistic
+    
     const { error } = await supabase.from('leads').update({ status: newStatus }).eq('id', lead.id)
-    if (error) toast.error('Failed to update status')
-    else toast.success('Status updated')
-    router.refresh()
-    setLoading(false)
+    if (error) {
+      setOptLead({ ...optLead, status: prev })
+      toast.error('Failed to update status')
+    } else {
+      toast.success('Status updated')
+      router.refresh()
+    }
   }
 
   async function addNote() {
     if (!noteText.trim()) return
-    setLoading(true)
+    const newNote = noteText
+    setNoteText(''); setShowNoteForm(false)
+    
+    // Optimistic
+    const tempActivity = { id: Date.now(), type: 'note', note: newNote, created_at: new Date().toISOString() }
+    setOptActivities([tempActivity, ...optActivities])
+
     const { error } = await supabase.from('lead_activities').insert({
-      lead_id: lead.id, user_id: userId, type: 'note', note: noteText,
+      lead_id: lead.id, user_id: userId, type: 'note', note: newNote,
     })
     if (error) toast.error('Failed to add note')
     else toast.success('Note added')
-    setNoteText(''); setShowNoteForm(false)
     router.refresh()
-    setLoading(false)
   }
 
   async function logCall() {
-    setLoading(true)
+    // Optimistic
+    const tempActivity = { id: Date.now(), type: 'call', note: 'Phone call made', created_at: new Date().toISOString() }
+    setOptActivities([tempActivity, ...optActivities])
+
     const { error } = await supabase.from('lead_activities').insert({
       lead_id: lead.id, user_id: userId, type: 'call', note: 'Phone call made',
     })
     if (error) toast.error('Failed to log call')
     else toast.success('Call logged')
     router.refresh()
-    setLoading(false)
   }
 
   async function addReminder() {
     if (!reminderTitle.trim() || !reminderDate) return
-    setLoading(true)
+    const title = reminderTitle
+    const date = reminderDate
+    setReminderTitle(''); setReminderDate(''); setShowReminderForm(false)
+
+    // Optimistic
+    const tempReminder = { id: Date.now(), title, reminder_date: new Date(date).toISOString(), is_completed: false }
+    setOptReminders([tempReminder, ...optReminders])
+
     const { error } = await supabase.from('reminders').insert({
       lead_id: lead.id, user_id: userId,
-      reminder_date: new Date(reminderDate).toISOString(), title: reminderTitle,
+      reminder_date: new Date(date).toISOString(), title,
     })
     if (error) toast.error('Failed to set reminder')
     else toast.success('Reminder set')
-    setReminderTitle(''); setReminderDate(''); setShowReminderForm(false)
     router.refresh()
-    setLoading(false)
   }
 
   async function reassignLead(agentId: string) {
-    setLoading(true)
+    const prev = optLead.assigned_agent
+    setOptLead({ ...optLead, assigned_agent: agentId }) // Optimistic
+
     const { error } = await supabase.from('leads').update({ assigned_agent: agentId }).eq('id', lead.id)
-    if (error) toast.error('Failed to reassign lead')
-    else toast.success('Lead reassigned')
-    router.refresh()
-    setLoading(false)
+    if (error) {
+      setOptLead({ ...optLead, assigned_agent: prev })
+      toast.error('Failed to reassign lead')
+    } else {
+      toast.success('Lead reassigned')
+      router.refresh()
+    }
   }
 
   return (
@@ -103,16 +138,16 @@ export default function LeadDetailClient({ lead, activities, reminders, agents, 
           <button onClick={() => router.back()} className="btn btn-ghost btn-sm" style={{ marginBottom: 8, padding: '4px 0' }}>
             <ArrowLeft size={16} style={{ marginRight: 4 }} /> Back
           </button>
-          <h1 className="page-title">{lead.name}</h1>
+          <h1 className="page-title">{optLead.name}</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-            <Phone size={14} /> {lead.phone}
+            <Phone size={14} /> {optLead.phone}
           </p>
         </div>
       </div>
 
       {/* Call button */}
-      <a href={`tel:${lead.phone}`} className="call-btn" onClick={() => logCall()} style={{ marginBottom: 20, display: 'flex' }}>
-        <Phone size={18} /> Call {lead.name}
+      <a href={`tel:${optLead.phone}`} className="call-btn" onClick={() => logCall()} style={{ marginBottom: 20, display: 'flex' }}>
+        <Phone size={18} /> Call {optLead.name}
       </a>
 
       {/* Status pipeline */}
@@ -122,10 +157,9 @@ export default function LeadDetailClient({ lead, activities, reminders, agents, 
           {STATUSES.map((s) => (
             <button
               key={s}
-              className={`status-btn ${lead.status === s ? 'active' : ''}`}
+              className={`status-btn ${optLead.status === s ? 'active' : ''}`}
               data-status={s}
               onClick={() => updateStatus(s)}
-              disabled={loading}
             >
               {STATUS_CONFIG[s].label}
             </button>
@@ -137,23 +171,23 @@ export default function LeadDetailClient({ lead, activities, reminders, agents, 
       <section className="section">
         <h3 className="section-title" style={{ marginBottom: 12 }}>Details</h3>
         <div className="card" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
-          <div><span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Interest</span><br/>{lead.interest || '—'}</div>
-          <div><span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Source</span><br/>{lead.source || '—'}</div>
+          <div><span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Interest</span><br/>{optLead.interest || '—'}</div>
+          <div><span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Source</span><br/>{optLead.source || '—'}</div>
           <div><span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Budget</span><br/>
-            {lead.budget_min || lead.budget_max ? `₹${lead.budget_min ? (lead.budget_min/100000).toFixed(0) + 'L' : '?'} – ₹${lead.budget_max ? (lead.budget_max/100000).toFixed(0) + 'L' : '?'}` : '—'}
+            {optLead.budget_min || optLead.budget_max ? `₹${optLead.budget_min ? (optLead.budget_min/100000).toFixed(0) + 'L' : '?'} – ₹${optLead.budget_max ? (optLead.budget_max/100000).toFixed(0) + 'L' : '?'}` : '—'}
           </div>
-          <div><span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Email</span><br/>{lead.email || '—'}</div>
+          <div><span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Email</span><br/>{optLead.email || '—'}</div>
           <div style={{ gridColumn: '1 / -1' }}><span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Assigned To</span><br/>
             {isAdmin ? (
-              <select value={lead.assigned_agent || ''} onChange={(e) => reassignLead(e.target.value)} style={{ marginTop: 4 }}>
+              <select value={optLead.assigned_agent || ''} onChange={(e) => reassignLead(e.target.value)} style={{ marginTop: 4 }}>
                 <option value="">Unassigned</option>
                 {agents.map((a: any) => <option key={a.id} value={a.id}>{a.full_name} {a.role === 'admin' ? '(Admin)' : ''}</option>)}
               </select>
             ) : (
-              lead.profiles?.full_name || 'Unassigned'
+              optLead.profiles?.full_name || 'Unassigned'
             )}
           </div>
-          {lead.notes && <div style={{ gridColumn: '1 / -1' }}><span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Notes</span><br/>{lead.notes}</div>}
+          {optLead.notes && <div style={{ gridColumn: '1 / -1' }}><span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Notes</span><br/>{optLead.notes}</div>}
         </div>
       </section>
 
@@ -192,11 +226,11 @@ export default function LeadDetailClient({ lead, activities, reminders, agents, 
       </section>
 
       {/* Reminders */}
-      {reminders.length > 0 && (
+      {optReminders.length > 0 && (
         <section className="section">
           <h3 className="section-title" style={{ marginBottom: 12 }}>Reminders</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {reminders.map((r: any) => (
+            {optReminders.map((r: any) => (
               <div key={r.id} className="task-card">
                 <span className={`task-checkbox ${r.is_completed ? 'completed' : ''}`}>{r.is_completed ? '✓' : ''}</span>
                 <div className="task-card-content">
@@ -214,11 +248,11 @@ export default function LeadDetailClient({ lead, activities, reminders, agents, 
       {/* Activity timeline */}
       <section className="section">
         <h3 className="section-title" style={{ marginBottom: 12 }}>Activity Timeline</h3>
-        {activities.length === 0 ? (
+        {optActivities.length === 0 ? (
           <div className="empty-state"><p>No activity yet.</p></div>
         ) : (
           <div className="timeline">
-            {activities.map((a: any) => (
+            {optActivities.map((a: any) => (
               <div key={a.id} className="timeline-item">
                 <div className={`timeline-dot ${a.type}`}>{TYPE_ICONS[a.type] || '•'}</div>
                 <div className="timeline-content">

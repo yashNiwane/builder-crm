@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useState, useEffect } from 'react'
+
 
 interface Reminder {
   id: string; title: string; reminder_date: string; is_completed: boolean;
@@ -13,12 +15,29 @@ export default function TaskList({ reminders, type }: { reminders: Reminder[]; t
   const supabase = createClient()
   const router = useRouter()
 
+  const [optimisticList, setOptimisticList] = useState<Reminder[]>(reminders)
+  
+  useEffect(() => {
+    setOptimisticList(reminders)
+  }, [reminders])
+
   async function toggleComplete(id: string, current: boolean) {
-    await supabase.from('reminders').update({
+    // Optimistic update
+    setOptimisticList((prev: Reminder[]) => prev.map(r => 
+      r.id === id ? { ...r, is_completed: !current } : r
+    ))
+
+    const { error } = await supabase.from('reminders').update({
       is_completed: !current,
       completed_at: !current ? new Date().toISOString() : null,
     }).eq('id', id)
-    router.refresh()
+    
+    if (error) {
+      // Revert if error
+      setOptimisticList(reminders)
+    } else {
+      router.refresh()
+    }
   }
 
   if (reminders.length === 0) {
@@ -31,7 +50,7 @@ export default function TaskList({ reminders, type }: { reminders: Reminder[]; t
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {reminders.map((r) => (
+      {optimisticList.map((r) => (
         <div key={r.id} className={`task-card ${type === 'overdue' ? 'overdue' : 'today'}`}>
           <button
             className={`task-checkbox ${r.is_completed ? 'completed' : ''}`}

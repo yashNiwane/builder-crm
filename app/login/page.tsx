@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ShimmerButton } from '@/components/magicui/shimmer-button'
 import { AnimatedGridPattern } from '@/components/magicui/animated-grid-pattern'
+import { Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -107,8 +108,17 @@ export default function LoginPage() {
           </div>
 
           <ShimmerButton type="submit" disabled={loading} className="w-full text-sm font-semibold" background="var(--bg-primary)" shimmerColor="var(--accent-blue)">
-            <span className="z-10 whitespace-pre-wrap text-center text-sm font-semibold leading-none tracking-tight text-white dark:from-white dark:to-slate-900/10 lg:text-lg">
-              {loading ? 'Please wait...' : isSignUp ? 'Create Account' : 'Sign In'}
+            <span className="z-10 whitespace-pre-wrap text-center flex items-center justify-center text-sm font-semibold leading-none tracking-tight text-white dark:from-white dark:to-slate-900/10 lg:text-lg">
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Loading...
+                </>
+              ) : isSignUp ? (
+                'Create Account'
+              ) : (
+                'Sign In'
+              )}
             </span>
           </ShimmerButton>
 
