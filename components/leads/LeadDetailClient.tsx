@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Phone, ArrowLeftRight, FileText, UserPlus, Sparkles, Clock, ArrowLeft, CheckCircle2 } from 'lucide-react'
@@ -45,7 +45,6 @@ export default function LeadDetailClient({ lead, activities, reminders, agents, 
   const [optReminders, setOptReminders] = useState(reminders)
   
   // Sync when props change (after router.refresh finishes)
-  import { useEffect } from 'react'
   useEffect(() => {
     setOptLead(lead)
     setOptActivities(activities)
